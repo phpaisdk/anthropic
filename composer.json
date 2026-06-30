@@ -2,6 +2,18 @@
     "name": "aisdk/anthropic",
     "description": "Official Anthropic provider for the PHP AI SDK.",
     "license": "MIT",
+    "keywords": [
+        "ai",
+        "aisdk",
+        "anthropic",
+        "claude",
+        "llm"
+    ],
+    "homepage": "https://github.com/phpaisdk/anthropic",
+    "support": {
+        "issues": "https://github.com/phpaisdk/anthropic/issues",
+        "source": "https://github.com/phpaisdk/anthropic"
+    },
     "require": {
         "php": "^8.3",
         "aisdk/core": "^0.1"
@@ -13,6 +25,8 @@
         "phpstan/phpstan": "^2.0",
         "rector/rector": "^2.0"
     },
+    "minimum-stability": "alpha",
+    "prefer-stable": true,
     "autoload": {
         "psr-4": {
             "AiSdk\\": "src/Root/",
@@ -38,11 +52,10 @@
         ]
     },
     "config": {
+        "sort-packages": true,
         "allow-plugins": {
             "pestphp/pest-plugin": true,
             "php-http/discovery": true
         }
-    },
-    "minimum-stability": "alpha",
-    "prefer-stable": true
+    }
 }
