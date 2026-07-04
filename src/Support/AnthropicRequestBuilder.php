@@ -26,8 +26,9 @@ final class AnthropicRequestBuilder
             'stream' => $stream,
         ];
 
-        if ($request->system !== null) {
-            $body['system'] = $request->system;
+        $system = self::system($request);
+        if ($system !== null) {
+            $body['system'] = $system;
         }
 
         if ($request->topP !== null) {
@@ -111,6 +112,28 @@ final class AnthropicRequestBuilder
         }
 
         return $messages;
+    }
+
+    private static function system(TextModelRequest $request): ?string
+    {
+        $system = [];
+
+        if ($request->system !== null && trim($request->system) !== '') {
+            $system[] = $request->system;
+        }
+
+        foreach ($request->messages as $message) {
+            if ($message->role !== Message::ROLE_SYSTEM) {
+                continue;
+            }
+
+            $text = trim($message->text());
+            if ($text !== '') {
+                $system[] = $text;
+            }
+        }
+
+        return $system === [] ? null : implode("\n\n", $system);
     }
 
     /**

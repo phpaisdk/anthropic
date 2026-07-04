@@ -50,6 +50,34 @@ it('generates text end to end through the Anthropic vertical', function () {
         ->and($client->lastRequest->getHeaderLine('anthropic-version'))->toBe('2023-06-01');
 });
 
+it('merges system messages into Anthropic top level system instructions', function () {
+    $client = new FakeHttpClient(200, json_encode([
+        'id' => 'msg_1',
+        'content' => [['type' => 'text', 'text' => 'Done']],
+        'stop_reason' => 'end_turn',
+        'usage' => ['input_tokens' => 9, 'output_tokens' => 4],
+    ]));
+    configureAnthropicWith($client);
+
+    Anthropic::create(['apiKey' => 'sk-ant-test']);
+
+    Generate::text()
+        ->instructions('Be terse')
+        ->messages([
+            \AiSdk\Message::system('Use metric units'),
+            \AiSdk\Message::user('Weather in Lahore?'),
+        ])
+        ->model(Anthropic::model('claude-sonnet-4'))
+        ->run();
+
+    $body = $client->sentBody();
+
+    expect($body['system'])->toBe("Be terse\n\nUse metric units")
+        ->and($body['messages'])->toHaveCount(1)
+        ->and($body['messages'][0]['role'])->toBe('user')
+        ->and($body['messages'][0]['content'][0]['text'])->toBe('Weather in Lahore?');
+});
+
 it('maps a 401 to an authentication exception', function () {
     $client = new FakeHttpClient(401, json_encode(['error' => ['message' => 'bad key']]));
     configureAnthropicWith($client);
