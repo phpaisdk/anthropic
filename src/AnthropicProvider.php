@@ -19,6 +19,6 @@ final class AnthropicProvider extends BaseProvider
 
     public function textModel(string $modelId): TextModelInterface
     {
-        return new AnthropicTextModel($modelId, $this->options, $this->modelRegistry());
+        return new AnthropicTextModel($modelId, $this->options);
     }
 }

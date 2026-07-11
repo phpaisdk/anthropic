@@ -7,12 +7,9 @@ namespace AiSdk;
 use AiSdk\Anthropic\AnthropicOptions;
 use AiSdk\Anthropic\AnthropicProvider;
 use AiSdk\Contracts\TextModelInterface;
-use AiSdk\Support\Concerns\RegistersModels;
 
 final class Anthropic
 {
-    use RegistersModels;
-
     private static ?AnthropicProvider $default = null;
 
     /**

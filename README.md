@@ -136,30 +136,11 @@ $result = Generate::text()
     ->run();
 ```
 
-## Custom Model Registration
+## Model IDs and Capabilities
 
-Register new Anthropic models without waiting for a package release:
+Anthropic model IDs pass through unchanged and do not need to be registered. The package does not ship a model inventory; the Anthropic API remains the authority on whether a particular model accepts a requested feature.
 
-```php
-use AiSdk\Anthropic;
-use AiSdk\Capability;
-
-Anthropic::registerModel('claude-5-sonnet', capabilities: [
-    Capability::TextGeneration,
-    Capability::Streaming,
-    Capability::ToolCalling,
-    Capability::StructuredOutput,
-    Capability::Reasoning,
-    Capability::TextInput,
-    Capability::ImageInput,
-]);
-
-$result = Generate::text('Hello')
-    ->model(Anthropic::model('claude-5-sonnet'))
-    ->run();
-```
-
-Use `ModelDefinition` only when you need metadata or adapted-capability details.
+Capabilities describe what the Anthropic adapter can serialize. The Anthropic API returns a normalized SDK exception if the selected model or requested feature is rejected.
 
 ## Provider-Specific Options
 

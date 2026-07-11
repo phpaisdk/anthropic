@@ -191,12 +191,3 @@ it('merges structured output tool with user tools instead of replacing them', fu
         ->and($body['tool_choice'])->toBe(['type' => 'tool', 'name' => 'structured_output'])
         ->and($result->output)->toBe(['city' => 'Lahore']);
 });
-
-it('reports adapted structured output from the model catalog', function () {
-    Anthropic::create(['apiKey' => 'sk-ant-test']);
-
-    $support = Anthropic::model('claude-sonnet-4')->capability(\AiSdk\Capability::StructuredOutput);
-
-    expect($support->state)->toBe(\AiSdk\CapabilitySupportState::Adapted)
-        ->and($support->strategy)->toContain('forced tool use');
-});
