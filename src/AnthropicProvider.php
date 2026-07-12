@@ -7,8 +7,9 @@ namespace AiSdk\Anthropic;
 use AiSdk\Anthropic\Models\AnthropicTextModel;
 use AiSdk\Contracts\BaseProvider;
 use AiSdk\Contracts\TextModelInterface;
+use AiSdk\Contracts\TextProviderInterface;
 
-final class AnthropicProvider extends BaseProvider
+final class AnthropicProvider extends BaseProvider implements TextProviderInterface
 {
     public function __construct(public readonly AnthropicOptions $options) {}
 
