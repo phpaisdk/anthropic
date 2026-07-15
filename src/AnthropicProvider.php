@@ -18,7 +18,7 @@ final class AnthropicProvider extends BaseProvider implements TextProviderInterf
         return AnthropicOptions::PROVIDER_NAME;
     }
 
-    public function textModel(string $modelId): TextModelInterface
+    protected function textModel(string $modelId): TextModelInterface
     {
         return new AnthropicTextModel($modelId, $this->options);
     }

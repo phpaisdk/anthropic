@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 use AiSdk\Anthropic\AnthropicOptions;
 use AiSdk\Anthropic\AnthropicProvider;
-use AiSdk\Contracts\TextModelInterface;
+use AiSdk\Contracts\Model;
 use AiSdk\Contracts\TextProviderInterface;
 use AiSdk\Exceptions\NoSuchModelException;
+use AiSdk\Generate;
+
+afterEach(fn() => Generate::reset());
 
 it('implements the text provider contract', function () {
     $provider = new AnthropicProvider(new AnthropicOptions(apiKey: 'sk-ant-test'));
@@ -14,34 +17,37 @@ it('implements the text provider contract', function () {
     expect($provider)->toBeInstanceOf(TextProviderInterface::class);
 });
 
-it('resolves a text model through the text contract', function () {
+it('selects every model through the unified model reference', function () {
     $provider = new AnthropicProvider(new AnthropicOptions(apiKey: 'sk-ant-test'));
 
-    $model = $provider->textModel('claude-sonnet-4');
+    $model = $provider->model('claude-sonnet-4');
 
-    expect($model)->toBeInstanceOf(TextModelInterface::class);
+    expect($model)->toBeInstanceOf(Model::class)
+        ->and($model->provider())->toBe('anthropic')
+        ->and($model->modelId())->toBe('claude-sonnet-4')
+        ->and(is_callable([$provider, 'textModel']))->toBeFalse();
 });
 
 it('does not support image generation', function () {
     $provider = new AnthropicProvider(new AnthropicOptions(apiKey: 'sk-ant-test'));
 
-    $provider->imageModel('some-image-model');
+    Generate::image('test')->model($provider->model('some-image-model'))->run();
 })->throws(NoSuchModelException::class);
 
 it('does not support speech generation', function () {
     $provider = new AnthropicProvider(new AnthropicOptions(apiKey: 'sk-ant-test'));
 
-    $provider->speechModel('some-speech-model');
+    Generate::speech('test')->model($provider->model('some-speech-model'))->run();
 })->throws(NoSuchModelException::class);
 
 it('does not support embedding generation', function () {
     $provider = new AnthropicProvider(new AnthropicOptions(apiKey: 'sk-ant-test'));
 
-    $provider->embeddingModel('some-embedding-model');
+    Generate::embedding('test')->model($provider->model('some-embedding-model'))->run();
 })->throws(NoSuchModelException::class);
 
 it('rejects video models through the base provider contract', function () {
     $provider = new AnthropicProvider(new AnthropicOptions(apiKey: 'sk-ant-test'));
 
-    $provider->videoModel('unsupported');
+    Generate::video('test')->model($provider->model('unsupported'))->run();
 })->throws(\AiSdk\Exceptions\NoSuchModelException::class);

@@ -6,7 +6,7 @@ namespace AiSdk;
 
 use AiSdk\Anthropic\AnthropicOptions;
 use AiSdk\Anthropic\AnthropicProvider;
-use AiSdk\Contracts\TextModelInterface;
+use AiSdk\Contracts\Model;
 
 final class Anthropic
 {
@@ -30,8 +30,8 @@ final class Anthropic
         self::$default = null;
     }
 
-    public static function model(string $modelId): TextModelInterface
+    public static function model(string $modelId): Model
     {
-        return self::default()->textModel($modelId);
+        return self::default()->model($modelId);
     }
 }
