@@ -169,7 +169,13 @@ $result = Generate::text('Hello')
 composer test
 ```
 
-## Links
+## Documentation
 
-- [Core Package](https://github.com/phpaisdk/core)
-- [Project Documentation](https://github.com/phpaisdk)
+- [PHP AI SDK documentation](https://phpaisdk.com/docs)
+- [Anthropic documentation](https://phpaisdk.com/docs/anthropic)
+
+## Community
+
+- [Contributing](https://github.com/phpaisdk/.github/blob/main/CONTRIBUTING.md)
+- [Support](https://github.com/phpaisdk/.github/blob/main/SUPPORT.md)
+- For private security reports, email [security@phpaisdk.com](mailto:security@phpaisdk.com).
