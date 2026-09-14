@@ -10,6 +10,7 @@ use AiSdk\Exceptions\InvalidArgumentException;
 use AiSdk\Message;
 use AiSdk\Outputs\Output;
 use AiSdk\Requests\TextModelRequest;
+use AiSdk\ToolChoice;
 
 final class AnthropicRequestBuilder
 {
@@ -36,7 +37,7 @@ final class AnthropicRequestBuilder
         }
 
         $tools = [];
-        if ($request->tools !== []) {
+        if ($request->tools !== [] && $request->toolChoice?->type !== ToolChoice::NONE) {
             $tools = AnthropicToolConverter::convert($request->tools);
         }
 
@@ -50,6 +51,10 @@ final class AnthropicRequestBuilder
 
         if ($tools !== []) {
             $body['tools'] = $tools;
+
+            if ($request->output === null && $request->toolChoice !== null) {
+                $body['tool_choice'] = self::toolChoice($request->toolChoice);
+            }
         }
 
         if ($request->reasoning !== null) {
@@ -57,12 +62,34 @@ final class AnthropicRequestBuilder
             $body['thinking'] = ['type' => 'enabled', 'budget_tokens' => $budget];
         }
 
-        $raw = $request->providerOptionsFor('anthropic')['raw'] ?? null;
-        if (is_array($raw)) {
-            $body = array_replace($body, $raw);
-        }
+        return self::mergeOptions($body, $request->providerOptionsFor('anthropic'));
+    }
 
-        return $body;
+    /** @return array<string, string> */
+    private static function toolChoice(ToolChoice $choice): array
+    {
+        return match ($choice->type) {
+            ToolChoice::AUTO => ['type' => 'auto'],
+            ToolChoice::REQUIRED => ['type' => 'any'],
+            ToolChoice::TOOL => ['type' => 'tool', 'name' => (string) $choice->toolName],
+            ToolChoice::NONE => ['type' => 'auto'],
+            default => ['type' => 'auto'],
+        };
+    }
+
+    /**
+     * @param array<string, mixed> $body
+     * @param array<string, mixed> $options
+     * @return array<string, mixed>
+     */
+    private static function mergeOptions(array $body, array $options): array
+    {
+        $raw = $options['raw'] ?? null;
+        unset($options['raw']);
+
+        $body = array_replace($body, $options);
+
+        return is_array($raw) ? array_replace($body, $raw) : $body;
     }
 
     /**

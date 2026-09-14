@@ -78,6 +78,27 @@ it('merges system messages into Anthropic top level system instructions', functi
         ->and($body['messages'][0]['content'][0]['text'])->toBe('Weather in Lahore?');
 });
 
+it('sends direct provider options and portable tool choices', function () {
+    $client = new FakeHttpClient(200, json_encode([
+        'id' => 'msg_1',
+        'content' => [['type' => 'text', 'text' => 'Done']],
+        'stop_reason' => 'end_turn',
+        'usage' => ['input_tokens' => 1, 'output_tokens' => 1],
+    ]));
+    configureAnthropicWith($client);
+    Anthropic::create(['apiKey' => 'sk-ant-test']);
+
+    Generate::text('Hi')
+        ->model(Anthropic::model('claude-sonnet-4'))
+        ->tool(\AiSdk\Tool::make('weather'))
+        ->toolChoice(\AiSdk\ToolChoice::tool('weather'))
+        ->providerOptions('anthropic', ['top_k' => 40])
+        ->run();
+
+    expect($client->sentBody()['top_k'])->toBe(40)
+        ->and($client->sentBody()['tool_choice'])->toBe(['type' => 'tool', 'name' => 'weather']);
+});
+
 it('maps a 401 to an authentication exception', function () {
     $client = new FakeHttpClient(401, json_encode(['error' => ['message' => 'bad key']]));
     configureAnthropicWith($client);
