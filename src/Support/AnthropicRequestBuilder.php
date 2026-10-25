@@ -14,18 +14,26 @@ use AiSdk\ToolChoice;
 
 final class AnthropicRequestBuilder
 {
+    /** Anthropic requires max_tokens; applied only when the caller omits it. */
+    public const int DEFAULT_MAX_TOKENS = 4096;
+
     /**
      * @return array<string, mixed>
      */
     public static function build(string $modelId, TextModelRequest $request, bool $stream): array
     {
+        $maxTokens = $request->maxTokens ?? self::DEFAULT_MAX_TOKENS;
+
         $body = [
             'model' => $modelId,
             'messages' => self::messages($request),
-            'max_tokens' => $request->maxTokens,
-            'temperature' => $request->temperature,
+            'max_tokens' => $maxTokens,
             'stream' => $stream,
         ];
+
+        if ($request->temperature !== null) {
+            $body['temperature'] = $request->temperature;
+        }
 
         $system = self::system($request);
         if ($system !== null) {
@@ -58,7 +66,7 @@ final class AnthropicRequestBuilder
         }
 
         if ($request->reasoning !== null) {
-            $budget = (new AnthropicReasoningBudget())->calculate($request->reasoning, $request->maxTokens);
+            $budget = (new AnthropicReasoningBudget())->calculate($request->reasoning, $maxTokens);
             $body['thinking'] = ['type' => 'enabled', 'budget_tokens' => $budget];
         }
 

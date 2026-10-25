@@ -212,3 +212,22 @@ it('merges structured output tool with user tools instead of replacing them', fu
         ->and($body['tool_choice'])->toBe(['type' => 'tool', 'name' => 'structured_output'])
         ->and($result->output)->toBe(['city' => 'Lahore']);
 });
+
+it('applies the Anthropic max_tokens default only when omitted and never invents a temperature', function () {
+    $client = new FakeHttpClient(200, json_encode([
+        'id' => 'msg_1',
+        'content' => [['type' => 'text', 'text' => 'ok']],
+        'stop_reason' => 'end_turn',
+        'usage' => ['input_tokens' => 1, 'output_tokens' => 1],
+    ]));
+    configureAnthropicWith($client);
+    Anthropic::create(['apiKey' => 'sk-ant-test']);
+
+    Generate::text('Hi')->model(Anthropic::model('claude-sonnet-4'))->run();
+    $body = $client->sentBody();
+    expect($body['max_tokens'])->toBe(4096)->and($body)->not->toHaveKey('temperature');
+
+    Generate::text('Hi')->model(Anthropic::model('claude-sonnet-4'))->maxTokens(200)->temperature(0.2)->run();
+    $body = $client->sentBody();
+    expect($body['max_tokens'])->toBe(200)->and($body['temperature'])->toBe(0.2);
+});
