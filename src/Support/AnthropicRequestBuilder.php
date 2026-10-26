@@ -9,6 +9,7 @@ use AiSdk\ContentSource;
 use AiSdk\Exceptions\InvalidArgumentException;
 use AiSdk\Message;
 use AiSdk\Outputs\Output;
+use AiSdk\PromptCache;
 use AiSdk\Requests\TextModelRequest;
 use AiSdk\ToolChoice;
 
@@ -23,10 +24,11 @@ final class AnthropicRequestBuilder
     public static function build(string $modelId, TextModelRequest $request, bool $stream): array
     {
         $maxTokens = $request->maxTokens ?? self::DEFAULT_MAX_TOKENS;
+        $cacheControl = self::cacheControl($request);
 
         $body = [
             'model' => $modelId,
-            'messages' => self::messages($request),
+            'messages' => self::messages($request, $cacheControl),
             'max_tokens' => $maxTokens,
             'stream' => $stream,
         ];
@@ -37,7 +39,9 @@ final class AnthropicRequestBuilder
 
         $system = self::system($request);
         if ($system !== null) {
-            $body['system'] = $system;
+            $body['system'] = $cacheControl === null
+                ? $system
+                : [['type' => 'text', 'text' => $system, 'cache_control' => $cacheControl]];
         }
 
         if ($request->topP !== null) {
@@ -58,6 +62,10 @@ final class AnthropicRequestBuilder
         }
 
         if ($tools !== []) {
+            if ($cacheControl !== null) {
+                $tools[array_key_last($tools)]['cache_control'] = $cacheControl;
+            }
+
             $body['tools'] = $tools;
 
             if ($request->output === null && $request->toolChoice !== null) {
@@ -101,9 +109,26 @@ final class AnthropicRequestBuilder
     }
 
     /**
+     * The cache_control marker for a PromptCache hint, or null when caching was not requested.
+     *
+     * @return array<string, string>|null
+     */
+    private static function cacheControl(TextModelRequest $request): ?array
+    {
+        if ($request->cache === null) {
+            return null;
+        }
+
+        return $request->cache->ttl === PromptCache::TTL_1_HOUR
+            ? ['type' => 'ephemeral', 'ttl' => '1h']
+            : ['type' => 'ephemeral'];
+    }
+
+    /**
+     * @param  array<string, string>|null  $cacheControl
      * @return array<int, array<string, mixed>>
      */
-    private static function messages(TextModelRequest $request): array
+    private static function messages(TextModelRequest $request, ?array $cacheControl = null): array
     {
         $messages = [];
 
@@ -144,6 +169,16 @@ final class AnthropicRequestBuilder
                 'role' => $message->role === Message::ROLE_ASSISTANT ? 'assistant' : 'user',
                 'content' => $content,
             ];
+        }
+
+        // Cache everything before the latest turn: the stable prefix of the conversation.
+        if ($cacheControl !== null && count($messages) >= 2) {
+            $prefix = count($messages) - 2;
+            $lastBlock = array_key_last($messages[$prefix]['content']);
+
+            if ($lastBlock !== null) {
+                $messages[$prefix]['content'][$lastBlock]['cache_control'] = $cacheControl;
+            }
         }
 
         return $messages;

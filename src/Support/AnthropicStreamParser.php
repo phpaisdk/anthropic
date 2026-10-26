@@ -26,6 +26,8 @@ final class AnthropicStreamParser
     {
         $inputTokens = 0;
         $outputTokens = 0;
+        $cacheRead = null;
+        $cacheWrite = null;
         $finishReason = FinishReason::Stop;
 
         foreach ($events as $event) {
@@ -50,6 +52,8 @@ final class AnthropicStreamParser
                 $usage = is_array($message['usage'] ?? null) ? $message['usage'] : [];
                 $inputTokens = isset($usage['input_tokens']) ? (int) $usage['input_tokens'] : $inputTokens;
                 $outputTokens = isset($usage['output_tokens']) ? (int) $usage['output_tokens'] : $outputTokens;
+                $cacheRead = isset($usage['cache_read_input_tokens']) ? (int) $usage['cache_read_input_tokens'] : $cacheRead;
+                $cacheWrite = isset($usage['cache_creation_input_tokens']) ? (int) $usage['cache_creation_input_tokens'] : $cacheWrite;
                 continue;
             }
 
@@ -89,7 +93,12 @@ final class AnthropicStreamParser
             }
         }
 
-        yield new FinishPart($finishReason, new Usage($inputTokens, $outputTokens));
+        yield new FinishPart($finishReason, new Usage(
+            inputTokens: $inputTokens + ($cacheRead ?? 0) + ($cacheWrite ?? 0),
+            outputTokens: $outputTokens,
+            cachedInputTokens: $cacheRead,
+            cacheWriteInputTokens: $cacheWrite,
+        ));
     }
 
     private static function finishReason(?string $reason): FinishReason
