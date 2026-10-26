@@ -28,6 +28,7 @@ final class AnthropicStreamParser
         $outputTokens = 0;
         $cacheRead = null;
         $cacheWrite = null;
+        $id = $model = $rawFinishReason = null;
         $finishReason = FinishReason::Stop;
 
         foreach ($events as $event) {
@@ -45,6 +46,8 @@ final class AnthropicStreamParser
 
             if ($type === 'message_start') {
                 $message = is_array($payload['message'] ?? null) ? $payload['message'] : [];
+                $id = is_string($message['id'] ?? null) ? $message['id'] : null;
+                $model = is_string($message['model'] ?? null) ? $message['model'] : null;
                 if (isset($message['id'])) {
                     yield new ProviderMetadataPart('anthropic', ['id' => $message['id']]);
                 }
@@ -86,6 +89,7 @@ final class AnthropicStreamParser
 
             if ($type === 'message_delta') {
                 $delta = is_array($payload['delta'] ?? null) ? $payload['delta'] : [];
+                $rawFinishReason = is_string($delta['stop_reason'] ?? null) ? $delta['stop_reason'] : null;
                 $finishReason = self::finishReason(isset($delta['stop_reason']) ? (string) $delta['stop_reason'] : null);
 
                 $usage = is_array($payload['usage'] ?? null) ? $payload['usage'] : [];
@@ -98,7 +102,7 @@ final class AnthropicStreamParser
             outputTokens: $outputTokens,
             cachedInputTokens: $cacheRead,
             cacheWriteInputTokens: $cacheWrite,
-        ));
+        ), new \AiSdk\Responses\ResponseMetadata($id, $model, $rawFinishReason));
     }
 
     private static function finishReason(?string $reason): FinishReason

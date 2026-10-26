@@ -56,6 +56,11 @@ final class AnthropicResponseParser
             finishReason: self::finishReason(isset($payload['stop_reason']) ? (string) $payload['stop_reason'] : null),
             usage: self::usage($payload['usage'] ?? null),
             rawResponse: $payload,
+            response: new \AiSdk\Responses\ResponseMetadata(
+                id: is_string($payload['id'] ?? null) ? $payload['id'] : null,
+                model: is_string($payload['model'] ?? null) ? $payload['model'] : null,
+                rawFinishReason: is_string($payload['stop_reason'] ?? null) ? ($payload['stop_reason'] ?? null) : null,
+            ),
             providerMetadata: ['anthropic' => ['id' => $payload['id'] ?? null]],
         );
     }
