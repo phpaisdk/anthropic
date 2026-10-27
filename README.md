@@ -179,3 +179,11 @@ composer test
 - [Contributing](https://github.com/phpaisdk/.github/blob/main/CONTRIBUTING.md)
 - [Support](https://github.com/phpaisdk/.github/blob/main/SUPPORT.md)
 - For private security reports, email [security@phpaisdk.com](mailto:security@phpaisdk.com).
+
+## Stored files (0.10.0 preparation)
+
+`Anthropic::files()` implements core `FileStoreInterface` for upload, metadata retrieval, paginated listing, download and deletion. Uploads have no OpenAI-style purpose field. The current Files documentation uses the normal `anthropic-version` header without a Files beta header.
+
+Use `Content::storedFile($stored->reference)` for documents or `Content::storedFile($stored->reference, image: true)` for images. Both map to native `source.type=file` blocks. Downloads are permitted by Anthropic only for files created by hosted tools; uploaded inputs have `downloadable=false`. File references are workspace-wide: enforce user ownership in your application before exposing any file operation.
+
+Sources: [Files](https://platform.claude.com/docs/en/build-with-claude/files), [PDF support](https://platform.claude.com/docs/en/build-with-claude/pdf-support), [vision](https://platform.claude.com/docs/en/build-with-claude/vision). Upload acceptance and model input acceptance are separate; file formats and model compatibility remain provider-owned.
