@@ -224,6 +224,9 @@ final class AnthropicRequestBuilder
      */
     private static function media(string $type, Content $content): array
     {
+        if (($file = $content->fileReference()) !== null) {
+            return ['type' => $type, 'source' => ['type' => 'file', 'file_id' => $file->forProvider('anthropic')]];
+        }
         if ($content->source() === ContentSource::Url) {
             return [
                 'type' => $type,

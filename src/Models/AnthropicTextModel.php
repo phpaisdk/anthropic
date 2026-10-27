@@ -37,6 +37,11 @@ final class AnthropicTextModel extends BaseModel implements TextModelInterface
         private readonly AnthropicOptions $options,
     ) {}
 
+    protected function supportsStoredFiles(): bool
+    {
+        return true;
+    }
+
     public function provider(): string
     {
         return AnthropicOptions::PROVIDER_NAME;

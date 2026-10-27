@@ -13,6 +13,11 @@ final class AnthropicProvider extends BaseProvider implements TextProviderInterf
 {
     public function __construct(public readonly AnthropicOptions $options) {}
 
+    public function files(): \AiSdk\Contracts\FileStoreInterface
+    {
+        return new \AiSdk\Anthropic\Files\AnthropicFileStore($this->options->sdk ?? \AiSdk\Generate::sdk(), $this->options->baseUrl, $this->options->authHeaders());
+    }
+
     public function name(): string
     {
         return AnthropicOptions::PROVIDER_NAME;
