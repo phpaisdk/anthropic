@@ -9,6 +9,7 @@ use AiSdk\FinishReason;
 use AiSdk\Responses\Parts\ReasoningPart;
 use AiSdk\Responses\Parts\TextPart;
 use AiSdk\Responses\Parts\ToolCallPart;
+use AiSdk\Responses\ResponseMetadata;
 use AiSdk\Responses\TextModelResponse;
 use AiSdk\Support\Json;
 use AiSdk\Support\Usage;
@@ -63,7 +64,7 @@ final class AnthropicResponseParser
             finishReason: self::finishReason(isset($payload['stop_reason']) ? (string) $payload['stop_reason'] : null),
             usage: self::usage($payload['usage'] ?? null),
             rawResponse: $payload,
-            response: new \AiSdk\Responses\ResponseMetadata(
+            response: new ResponseMetadata(
                 id: is_string($payload['id'] ?? null) ? $payload['id'] : null,
                 model: is_string($payload['model'] ?? null) ? $payload['model'] : null,
                 rawFinishReason: is_string($payload['stop_reason'] ?? null) ? ($payload['stop_reason'] ?? null) : null,
@@ -72,11 +73,12 @@ final class AnthropicResponseParser
         );
     }
 
-    private static function finishReason(?string $reason): FinishReason
+    public static function finishReason(?string $reason): FinishReason
     {
         return match ($reason) {
             'end_turn', 'stop_sequence' => FinishReason::Stop,
-            'max_tokens' => FinishReason::Length,
+            'refusal' => FinishReason::ContentFilter,
+            'max_tokens', 'model_context_window_exceeded' => FinishReason::Length,
             'tool_use' => FinishReason::ToolCalls,
             default => FinishReason::Unknown,
         };

@@ -2,6 +2,10 @@
 
 Notable changes to `aisdk/anthropic`. Release notes are also published at https://github.com/phpaisdk/anthropic/releases.
 
+## Unreleased (v0.10.2)
+
+- Distinguish refusals and exhausted context windows in synchronous and streamed finish reasons while preserving the raw reason.
+
 ## v0.10.1 — 2026-10-29
 
 - Responses without content and streams that never finish raise `InvalidResponseException`; stream errors are typed (for example `OverloadedException`).

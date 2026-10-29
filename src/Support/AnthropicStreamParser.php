@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace AiSdk\Anthropic\Support;
 
+use AiSdk\Exceptions\InvalidResponseException;
 use AiSdk\FinishReason;
+use AiSdk\Responses\ResponseMetadata;
 use AiSdk\Streaming\ErrorPart;
 use AiSdk\Streaming\FinishPart;
 use AiSdk\Streaming\ProviderMetadataPart;
@@ -14,6 +16,7 @@ use AiSdk\Streaming\TextDeltaPart;
 use AiSdk\Streaming\ToolCallDeltaPart;
 use AiSdk\Streaming\ToolCallStartPart;
 use AiSdk\Support\Usage;
+use AiSdk\Utils\Errors\HttpErrorNormalizer;
 use Generator;
 
 final class AnthropicStreamParser
@@ -41,7 +44,8 @@ final class AnthropicStreamParser
             $type = (string) ($payload['type'] ?? $event['event'] ?? '');
 
             if ($type === 'error') {
-                yield new ErrorPart(\AiSdk\Utils\Errors\HttpErrorNormalizer::fromStreamError('anthropic', $payload['error'] ?? null));
+                yield new ErrorPart(HttpErrorNormalizer::fromStreamError('anthropic', $payload['error'] ?? null));
+
                 continue;
             }
 
@@ -58,6 +62,7 @@ final class AnthropicStreamParser
                 $outputTokens = isset($usage['output_tokens']) ? (int) $usage['output_tokens'] : $outputTokens;
                 $cacheRead = isset($usage['cache_read_input_tokens']) ? (int) $usage['cache_read_input_tokens'] : $cacheRead;
                 $cacheWrite = isset($usage['cache_creation_input_tokens']) ? (int) $usage['cache_creation_input_tokens'] : $cacheWrite;
+
                 continue;
             }
 
@@ -91,7 +96,7 @@ final class AnthropicStreamParser
             if ($type === 'message_delta') {
                 $delta = is_array($payload['delta'] ?? null) ? $payload['delta'] : [];
                 $rawFinishReason = is_string($delta['stop_reason'] ?? null) ? $delta['stop_reason'] : null;
-                $finishReason = self::finishReason(isset($delta['stop_reason']) ? (string) $delta['stop_reason'] : null);
+                $finishReason = AnthropicResponseParser::finishReason(isset($delta['stop_reason']) ? (string) $delta['stop_reason'] : null);
                 $stopped = true;
 
                 $usage = is_array($payload['usage'] ?? null) ? $payload['usage'] : [];
@@ -100,7 +105,7 @@ final class AnthropicStreamParser
         }
 
         if (! $stopped) {
-            throw \AiSdk\Exceptions\InvalidResponseException::forProvider('anthropic', 'Anthropic ended its event stream before the message finished; the response may be incomplete.');
+            throw InvalidResponseException::forProvider('anthropic', 'Anthropic ended its event stream before the message finished; the response may be incomplete.');
         }
 
         yield new FinishPart($finishReason, new Usage(
@@ -108,16 +113,6 @@ final class AnthropicStreamParser
             outputTokens: $outputTokens,
             cachedInputTokens: $cacheRead,
             cacheWriteInputTokens: $cacheWrite,
-        ), new \AiSdk\Responses\ResponseMetadata($id, $model, $rawFinishReason));
-    }
-
-    private static function finishReason(?string $reason): FinishReason
-    {
-        return match ($reason) {
-            'end_turn', 'stop_sequence' => FinishReason::Stop,
-            'max_tokens' => FinishReason::Length,
-            'tool_use' => FinishReason::ToolCalls,
-            default => FinishReason::Unknown,
-        };
+        ), new ResponseMetadata($id, $model, $rawFinishReason));
     }
 }
