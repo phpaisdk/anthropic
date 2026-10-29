@@ -4,6 +4,7 @@ Notable changes to `aisdk/anthropic`. Release notes are also published at https:
 
 ## Unreleased (v0.10.2)
 
+- Automatically continue paused server-tool turns, including streams, up to five times; combine generated content and token usage.
 - Distinguish refusals and exhausted context windows in synchronous and streamed finish reasons while preserving the raw reason.
 
 ## v0.10.1 — 2026-10-29

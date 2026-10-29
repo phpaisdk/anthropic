@@ -23,10 +23,11 @@ final class AnthropicStreamParser
 {
     /**
      * @param  iterable<int, array{event: ?string, data: string}>  $events
-     * @return Generator<int, StreamPart>
+     * @return Generator<int, StreamPart, mixed, array<int, array<string, mixed>>>
      */
-    public static function parse(iterable $events): Generator
+    public static function parse(iterable $events, int $indexOffset = 0): Generator
     {
+        $content = $partialInputs = [];
         $stopped = false;
         $inputTokens = 0;
         $outputTokens = 0;
@@ -68,9 +69,14 @@ final class AnthropicStreamParser
 
             if ($type === 'content_block_start') {
                 $block = is_array($payload['content_block'] ?? null) ? $payload['content_block'] : [];
+                $index = (int) ($payload['index'] ?? 0);
+                // Decode nested objects without converting empty JSON objects to arrays on replay.
+                $raw = json_decode($event['data']);
+                $content[$index] = isset($raw->content_block) && is_object($raw->content_block)
+                    ? get_object_vars($raw->content_block) : $block;
                 if (($block['type'] ?? null) === 'tool_use') {
                     yield new ToolCallStartPart(
-                        index: (int) ($payload['index'] ?? 0),
+                        index: $index + $indexOffset,
                         id: (string) ($block['id'] ?? ''),
                         name: (string) ($block['name'] ?? ''),
                     );
@@ -83,10 +89,29 @@ final class AnthropicStreamParser
                 $delta = is_array($payload['delta'] ?? null) ? $payload['delta'] : [];
                 $index = (int) ($payload['index'] ?? 0);
 
+                if (isset($content[$index])) {
+                    $field = match ($delta['type'] ?? null) {
+                        'text_delta' => 'text',
+                        'thinking_delta' => 'thinking',
+                        'signature_delta' => 'signature',
+                        default => null,
+                    };
+                    if ($field !== null) {
+                        $content[$index][$field] = ($content[$index][$field] ?? '') . ($delta[$field] ?? '');
+                    }
+                    if (($delta['type'] ?? null) === 'citations_delta' && isset($delta['citation'])) {
+                        $content[$index]['citations'][] = $delta['citation'];
+                    }
+                    if (($delta['type'] ?? null) === 'input_json_delta') {
+                        $partialInputs[$index] = ($partialInputs[$index] ?? '') . ($delta['partial_json'] ?? '');
+                    }
+                }
+
                 match ($delta['type'] ?? null) {
                     'text_delta' => yield new TextDeltaPart((string) ($delta['text'] ?? '')),
                     'thinking_delta' => yield new ReasoningDeltaPart((string) ($delta['thinking'] ?? '')),
-                    'input_json_delta' => yield new ToolCallDeltaPart($index, (string) ($delta['partial_json'] ?? '')),
+                    'input_json_delta' => ($content[$index]['type'] ?? null) === 'tool_use'
+                        ? yield new ToolCallDeltaPart($index + $indexOffset, (string) ($delta['partial_json'] ?? '')) : null,
                     default => null,
                 };
 
@@ -108,11 +133,21 @@ final class AnthropicStreamParser
             throw InvalidResponseException::forProvider('anthropic', 'Anthropic ended its event stream before the message finished; the response may be incomplete.');
         }
 
+        foreach ($partialInputs as $index => $json) {
+            $input = json_decode($json);
+            if (! is_object($input)) {
+                throw InvalidResponseException::forProvider('anthropic', 'Anthropic returned invalid streamed tool input.');
+            }
+            $content[$index]['input'] = $input;
+        }
+
         yield new FinishPart($finishReason, new Usage(
             inputTokens: $inputTokens + ($cacheRead ?? 0) + ($cacheWrite ?? 0),
             outputTokens: $outputTokens,
             cachedInputTokens: $cacheRead,
             cacheWriteInputTokens: $cacheWrite,
         ), new ResponseMetadata($id, $model, $rawFinishReason));
+
+        return array_values($content);
     }
 }

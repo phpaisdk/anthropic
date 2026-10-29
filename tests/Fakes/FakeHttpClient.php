@@ -13,6 +13,17 @@ final class FakeHttpClient implements ClientInterface
 {
     public ?RequestInterface $lastRequest = null;
 
+    /** @var array<int, RequestInterface> */
+    public array $requests = [];
+
+    /** @var array<int, string> */
+    private array $queuedBodies = [];
+
+    public function queue(string ...$bodies): void
+    {
+        $this->queuedBodies = [...$this->queuedBodies, ...$bodies];
+    }
+
     public function __construct(
         private readonly int $status,
         private readonly string $body,
@@ -22,8 +33,9 @@ final class FakeHttpClient implements ClientInterface
     public function sendRequest(RequestInterface $request): ResponseInterface
     {
         $this->lastRequest = $request;
+        $this->requests[] = $request;
 
-        return new Response($this->status, ['Content-Type' => $this->contentType], $this->body);
+        return new Response($this->status, ['Content-Type' => $this->contentType], array_shift($this->queuedBodies) ?? $this->body);
     }
 
     /**
