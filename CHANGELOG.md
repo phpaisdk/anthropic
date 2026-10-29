@@ -4,6 +4,7 @@ Notable changes to `aisdk/anthropic`. Release notes are also published at https:
 
 ## Unreleased (v0.10.2)
 
+- Report cumulative streamed input, output and cache usage accurately, plus reasoning tokens when Anthropic supplies them.
 - Automatically continue paused server-tool turns, including streams, up to five times; combine generated content and token usage.
 - Distinguish refusals and exhausted context windows in synchronous and streamed finish reasons while preserving the raw reason.
 

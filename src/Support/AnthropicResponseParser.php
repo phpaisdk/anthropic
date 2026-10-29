@@ -100,12 +100,15 @@ final class AnthropicResponseParser
      */
     public static function usageFrom(array $usage, int $outputTokens = 0): Usage
     {
+        $details = is_array($usage['output_tokens_details'] ?? null) ? $usage['output_tokens_details'] : [];
         $read = isset($usage['cache_read_input_tokens']) ? (int) $usage['cache_read_input_tokens'] : null;
         $write = isset($usage['cache_creation_input_tokens']) ? (int) $usage['cache_creation_input_tokens'] : null;
 
         return new Usage(
             inputTokens: (isset($usage['input_tokens']) ? (int) $usage['input_tokens'] : 0) + ($read ?? 0) + ($write ?? 0),
             outputTokens: isset($usage['output_tokens']) ? (int) $usage['output_tokens'] : $outputTokens,
+            // https://platform.claude.com/docs/en/build-with-claude/extended-thinking
+            reasoningTokens: isset($details['thinking_tokens']) ? (int) $details['thinking_tokens'] : null,
             cachedInputTokens: $read,
             cacheWriteInputTokens: $write,
         );

@@ -15,7 +15,6 @@ use AiSdk\Streaming\StreamPart;
 use AiSdk\Streaming\TextDeltaPart;
 use AiSdk\Streaming\ToolCallDeltaPart;
 use AiSdk\Streaming\ToolCallStartPart;
-use AiSdk\Support\Usage;
 use AiSdk\Utils\Errors\HttpErrorNormalizer;
 use Generator;
 
@@ -29,10 +28,7 @@ final class AnthropicStreamParser
     {
         $content = $partialInputs = [];
         $stopped = false;
-        $inputTokens = 0;
-        $outputTokens = 0;
-        $cacheRead = null;
-        $cacheWrite = null;
+        $usage = [];
         $id = $model = $rawFinishReason = null;
         $finishReason = FinishReason::Stop;
 
@@ -59,10 +55,6 @@ final class AnthropicStreamParser
                 }
 
                 $usage = is_array($message['usage'] ?? null) ? $message['usage'] : [];
-                $inputTokens = isset($usage['input_tokens']) ? (int) $usage['input_tokens'] : $inputTokens;
-                $outputTokens = isset($usage['output_tokens']) ? (int) $usage['output_tokens'] : $outputTokens;
-                $cacheRead = isset($usage['cache_read_input_tokens']) ? (int) $usage['cache_read_input_tokens'] : $cacheRead;
-                $cacheWrite = isset($usage['cache_creation_input_tokens']) ? (int) $usage['cache_creation_input_tokens'] : $cacheWrite;
 
                 continue;
             }
@@ -120,12 +112,15 @@ final class AnthropicStreamParser
 
             if ($type === 'message_delta') {
                 $delta = is_array($payload['delta'] ?? null) ? $payload['delta'] : [];
-                $rawFinishReason = is_string($delta['stop_reason'] ?? null) ? $delta['stop_reason'] : null;
-                $finishReason = AnthropicResponseParser::finishReason(isset($delta['stop_reason']) ? (string) $delta['stop_reason'] : null);
-                $stopped = true;
+                if (is_string($delta['stop_reason'] ?? null)) {
+                    $rawFinishReason = $delta['stop_reason'];
+                    $finishReason = AnthropicResponseParser::finishReason($rawFinishReason);
+                    $stopped = true;
+                }
 
-                $usage = is_array($payload['usage'] ?? null) ? $payload['usage'] : [];
-                $outputTokens = isset($usage['output_tokens']) ? (int) $usage['output_tokens'] : $outputTokens;
+                // All message_delta counts are cumulative, including server-tool input and cache usage.
+                // https://platform.claude.com/docs/en/build-with-claude/streaming
+                $usage = array_replace_recursive($usage, is_array($payload['usage'] ?? null) ? $payload['usage'] : []);
             }
         }
 
@@ -141,12 +136,7 @@ final class AnthropicStreamParser
             $content[$index]['input'] = $input;
         }
 
-        yield new FinishPart($finishReason, new Usage(
-            inputTokens: $inputTokens + ($cacheRead ?? 0) + ($cacheWrite ?? 0),
-            outputTokens: $outputTokens,
-            cachedInputTokens: $cacheRead,
-            cacheWriteInputTokens: $cacheWrite,
-        ), new ResponseMetadata($id, $model, $rawFinishReason));
+        yield new FinishPart($finishReason, AnthropicResponseParser::usageFrom($usage), new ResponseMetadata($id, $model, $rawFinishReason));
 
         return array_values($content);
     }

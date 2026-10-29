@@ -45,13 +45,14 @@ function pauseFixture(string $reason, array $content, bool $streaming): string
 {
     $message = [
         'id' => 'message-' . $reason, 'model' => 'opaque-model', 'content' => $content, 'stop_reason' => $reason,
-        'usage' => ['input_tokens' => 3, 'output_tokens' => 4, 'cache_read_input_tokens' => 10, 'cache_creation_input_tokens' => 2],
+        'usage' => ['input_tokens' => 3, 'output_tokens' => 4, 'cache_read_input_tokens' => 10, 'cache_creation_input_tokens' => 2, 'output_tokens_details' => ['thinking_tokens' => 2]],
     ];
     if (! $streaming) {
         return json_encode($message);
     }
     $message['content'] = [];
     $message['usage']['output_tokens'] = 1;
+    unset($message['usage']['output_tokens_details']);
     $events = [['type' => 'message_start', 'message' => $message]];
     foreach ($content as $index => $block) {
         $type = $block['type'];
@@ -80,7 +81,7 @@ function pauseFixture(string $reason, array $content, bool $streaming): string
         }
         $events[] = ['type' => 'content_block_stop', 'index' => $index];
     }
-    $events[] = ['type' => 'message_delta', 'delta' => ['stop_reason' => $reason], 'usage' => ['output_tokens' => 4]];
+    $events[] = ['type' => 'message_delta', 'delta' => ['stop_reason' => $reason], 'usage' => ['output_tokens' => 4, 'output_tokens_details' => ['thinking_tokens' => 2]]];
     $events[] = ['type' => 'message_stop'];
 
     return implode("\n\n", array_map(fn(array $event): string => 'data: ' . json_encode($event), $events)) . "\n\n";
@@ -114,6 +115,7 @@ it('continues paused turns with verbatim server blocks and accumulates content a
         ->and($result->reasoning)->toBe('Plan')
         ->and($result->usage->inputTokens)->toBe(30)
         ->and($result->usage->outputTokens)->toBe(8)
+        ->and($result->usage->reasoningTokens)->toBe(4)
         ->and($result->usage->cachedInputTokens)->toBe(20)
         ->and($result->usage->cacheWriteInputTokens)->toBe(4)
         ->and($result->finishReason)->toBe(FinishReason::Stop)
