@@ -2,7 +2,7 @@
 
 Notable changes to `aisdk/anthropic`. Release notes are also published at https://github.com/phpaisdk/anthropic/releases.
 
-## Unreleased (v0.10.2)
+## v0.10.2 — 2026-10-29
 
 - Report cumulative streamed input, output and cache usage accurately, plus reasoning tokens when Anthropic supplies them.
 - Automatically continue paused server-tool turns, including streams, up to five times; combine generated content and token usage.
