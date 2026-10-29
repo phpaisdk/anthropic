@@ -2,6 +2,11 @@
 
 Notable changes to `aisdk/anthropic`. Release notes are also published at https://github.com/phpaisdk/anthropic/releases.
 
+## Unreleased (v0.10.1)
+
+- Responses without content and streams that never finish raise `InvalidResponseException`; stream errors are typed (for example `OverloadedException`).
+- Raise SDK exceptions instead of native PHP ones.
+
 ## v0.10.0 — 2026-10-29
 
 ### What's new
