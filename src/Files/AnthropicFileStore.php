@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AiSdk\Anthropic\Files;
 
 use AiSdk\Contracts\FileStoreInterface;
+use AiSdk\Exceptions\InvalidArgumentException;
 use AiSdk\Exceptions\InvalidResponseException;
 use AiSdk\Files\FilePage;
 use AiSdk\Files\FileReference;
@@ -39,7 +40,7 @@ final readonly class AnthropicFileStore implements FileStoreInterface
     public function list(?string $cursor = null, int $limit = 20): FilePage
     {
         if ($limit < 1 || $limit > 1000) {
-            throw new \InvalidArgumentException('File page limit must be between 1 and 1000.');
+            throw new InvalidArgumentException('File page limit must be between 1 and 1000.');
         }
         $query = ['limit' => $limit];
         if ($cursor !== null) {
