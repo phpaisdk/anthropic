@@ -231,3 +231,26 @@ it('applies the Anthropic max_tokens default only when omitted and never invents
     $body = $client->sentBody();
     expect($body['max_tokens'])->toBe(200)->and($body['temperature'])->toBe(0.2);
 });
+
+it('rejects successful responses that do not contain content', function (string $body) {
+    configureAnthropicWith(new FakeHttpClient(200, $body));
+    Anthropic::create(['apiKey' => 'test']);
+    set_error_handler(static fn(int $no, string $str) => throw new ErrorException($str));
+
+    try {
+        expect(fn() => Generate::text('Hi')->model(Anthropic::model('claude'))->run())->toThrow(AiSdk\Exceptions\InvalidResponseException::class);
+    } finally {
+        restore_error_handler();
+    }
+})->with(['{}', '[1,2]', '{"type":"error","error":{"message":"overloaded"}}', '{"content":"text"}']);
+
+it('types stream errors and rejects a stream that never finishes', function () {
+    $event = fn(array $payload): string => 'data: ' . json_encode($payload) . "\n\n";
+    configureAnthropicWith(new FakeHttpClient(200, $event(['type' => 'error', 'error' => ['type' => 'overloaded_error', 'message' => 'busy']]), 'text/event-stream'));
+    Anthropic::create(['apiKey' => 'test']);
+    expect(fn() => Generate::text('Hi')->model(Anthropic::model('claude'))->stream()->run())->toThrow(AiSdk\Exceptions\OverloadedException::class);
+
+    configureAnthropicWith(new FakeHttpClient(200, $event(['type' => 'content_block_delta', 'index' => 0, 'delta' => ['type' => 'text_delta', 'text' => 'cut off']]), 'text/event-stream'));
+    Anthropic::create(['apiKey' => 'test']);
+    expect(fn() => Generate::text('Hi')->model(Anthropic::model('claude'))->stream()->run())->toThrow(AiSdk\Exceptions\InvalidResponseException::class);
+});

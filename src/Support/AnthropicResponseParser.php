@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace AiSdk\Anthropic\Support;
 
+use AiSdk\Exceptions\InvalidResponseException;
 use AiSdk\FinishReason;
 use AiSdk\Responses\Parts\ReasoningPart;
 use AiSdk\Responses\Parts\TextPart;
@@ -19,9 +20,15 @@ final class AnthropicResponseParser
      */
     public static function parse(array $payload): TextModelResponse
     {
+        if (($payload['type'] ?? null) === 'error' || ! is_array($payload['content'] ?? null)) {
+            $error = $payload['error']['message'] ?? null;
+
+            throw InvalidResponseException::forProvider('anthropic', 'Anthropic returned an unexpected response' . (is_string($error) ? ': ' . $error : ' without content.'));
+        }
+
         $parts = [];
 
-        foreach (($payload['content'] ?? []) as $item) {
+        foreach ($payload['content'] as $item) {
             if (! is_array($item)) {
                 continue;
             }

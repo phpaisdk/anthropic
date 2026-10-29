@@ -24,6 +24,7 @@ final class AnthropicStreamParser
      */
     public static function parse(iterable $events): Generator
     {
+        $stopped = false;
         $inputTokens = 0;
         $outputTokens = 0;
         $cacheRead = null;
@@ -40,7 +41,7 @@ final class AnthropicStreamParser
             $type = (string) ($payload['type'] ?? $event['event'] ?? '');
 
             if ($type === 'error') {
-                yield new ErrorPart(new \RuntimeException((string) ($payload['error']['message'] ?? 'Anthropic stream error.')));
+                yield new ErrorPart(\AiSdk\Utils\Errors\HttpErrorNormalizer::fromStreamError('anthropic', $payload['error'] ?? null));
                 continue;
             }
 
@@ -91,10 +92,15 @@ final class AnthropicStreamParser
                 $delta = is_array($payload['delta'] ?? null) ? $payload['delta'] : [];
                 $rawFinishReason = is_string($delta['stop_reason'] ?? null) ? $delta['stop_reason'] : null;
                 $finishReason = self::finishReason(isset($delta['stop_reason']) ? (string) $delta['stop_reason'] : null);
+                $stopped = true;
 
                 $usage = is_array($payload['usage'] ?? null) ? $payload['usage'] : [];
                 $outputTokens = isset($usage['output_tokens']) ? (int) $usage['output_tokens'] : $outputTokens;
             }
+        }
+
+        if (! $stopped) {
+            throw \AiSdk\Exceptions\InvalidResponseException::forProvider('anthropic', 'Anthropic ended its event stream before the message finished; the response may be incomplete.');
         }
 
         yield new FinishPart($finishReason, new Usage(
