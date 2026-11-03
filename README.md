@@ -1,14 +1,6 @@
-# aisdk/anthropic
+# PHP AI SDK — Anthropic
 
-<a href="https://github.com/phpaisdk/anthropic/actions"><img alt="GitHub Workflow Status" src="https://img.shields.io/github/actions/workflow/status/phpaisdk/anthropic/tests.yml?branch=main&label=Tests"></a>
-<a href="https://packagist.org/packages/aisdk/anthropic"><img alt="Total Downloads" src="https://img.shields.io/packagist/dt/aisdk/anthropic"></a>
-<a href="https://packagist.org/packages/aisdk/anthropic"><img alt="Latest Version" src="https://img.shields.io/packagist/v/aisdk/anthropic"></a>
-<a href="https://packagist.org/packages/aisdk/anthropic"><img alt="License" src="https://img.shields.io/packagist/l/aisdk/anthropic"></a>
-<a href="https://whyphp.dev"><img src="https://img.shields.io/badge/Why_PHP-in_2026-7A86E8?style=flat-square&labelColor=18181b" alt="Why PHP in 2026"></a>
-
-------
-
-Official Anthropic provider for the PHP AI SDK.
+Text generation, streaming, tools, structured output, and document input with Claude. Part of the framework-agnostic [PHP AI SDK](https://phpaisdk.com).
 
 ## Installation
 
@@ -16,174 +8,27 @@ Official Anthropic provider for the PHP AI SDK.
 composer require aisdk/anthropic
 ```
 
-## Basic Usage
+Set `ANTHROPIC_API_KEY` in your environment.
+
+## Usage
 
 ```php
 use AiSdk\Anthropic;
 use AiSdk\Generate;
 
-$result = Generate::text()
-    ->model(Anthropic::model('claude-sonnet-4'))
-    ->instructions('Write short, clear answers.')
-    ->prompt('Explain closures in PHP.')
+$result = Generate::text('Explain closures in PHP in one sentence.')
+    ->model(Anthropic::model('claude-sonnet-5-5'))
     ->run();
 
 echo $result->text;
 ```
 
-Default model shorthand:
-
-```php
-Generate::model(Anthropic::model('claude-sonnet-4'));
-
-$result = Generate::text('Explain closures in PHP.')->run();
-```
-
-## Configuration
-
-### Environment Variables
-
-| Variable | Description | Default |
-|---|---|---|
-| `ANTHROPIC_API_KEY` | API key for authentication | Required |
-| `ANTHROPIC_BASE_URL` | Base URL for API requests | `https://api.anthropic.com/v1` |
-| `ANTHROPIC_VERSION` | API version header | `2023-06-01` |
-
-### Programmatic Configuration
-
-```php
-$provider = Anthropic::create([
-    'apiKey' => 'sk-ant-...',
-    'baseUrl' => 'https://api.anthropic.com/v1',
-    'version' => '2023-06-01',
-    'headers' => ['anthropic-beta' => 'extended-thinking-2025-05-14'],
-]);
-```
-
-## Supported Capabilities
-
-| Capability | Support |
-|---|---|
-| Text generation | Native |
-| Streaming | Native |
-| Tool calling | Native |
-| Structured output | Adapted (forced tool use) |
-| Reasoning | Native (`thinking` blocks) |
-| Text input | Native |
-| Image input | Native |
-| File input | Native (documents) |
-
-## Streaming
-
-```php
-use AiSdk\Anthropic;
-use AiSdk\Generate;
-
-$stream = Generate::text('Tell me a story.')
-    ->model(Anthropic::model('claude-sonnet-4'))
-    ->stream();
-
-foreach ($stream->chunks() as $chunk) {
-    echo $chunk;
-}
-
-$result = $stream->run();
-```
-
-## Structured Output
-
-Anthropic does not natively support `json_schema` response format. Structured output is adapted through forced tool use:
-
-```php
-use AiSdk\Anthropic;
-use AiSdk\Generate;
-use AiSdk\Schema;
-
-$result = Generate::text()
-    ->model(Anthropic::model('claude-sonnet-4'))
-    ->prompt('Extract the city and country from: Lahore, Pakistan.')
-    ->output(Schema::object(
-        name: 'address',
-        properties: [
-            Schema::string(name: 'city')->required(),
-            Schema::string(name: 'country')->required(),
-        ],
-    ))
-    ->run();
-```
-
-## Reasoning
-
-```php
-use AiSdk\Anthropic;
-use AiSdk\Generate;
-use AiSdk\Reasoning;
-
-$result = Generate::text('Solve: what is 2+2?')
-    ->model(Anthropic::model('claude-sonnet-4'))
-    ->reasoning(Reasoning::effort('high'))
-    ->run();
-```
-
-## Tools
-
-```php
-use AiSdk\Anthropic;
-use AiSdk\Generate;
-use AiSdk\Schema;
-use AiSdk\Tool;
-
-$weather = Tool::make('weather', 'Get current weather')
-    ->input(Schema::string(name: 'city')->required())
-    ->run(fn (string $city): string => "Sunny in {$city}");
-
-$result = Generate::text()
-    ->model(Anthropic::model('claude-sonnet-4'))
-    ->prompt('What is the weather in Lahore?')
-    ->tool($weather)
-    ->run();
-```
-
-## Model IDs and Capabilities
-
-Anthropic model IDs pass through unchanged and do not need to be registered. The package does not ship a model inventory; the Anthropic API remains the authority on whether a particular model accepts a requested feature.
-
-Capabilities describe what the Anthropic adapter can serialize. The Anthropic API returns a normalized SDK exception if the selected model or requested feature is rejected.
-
-## Provider-Specific Options
-
-Raw provider options can be passed as an escape hatch:
-
-```php
-$result = Generate::text('Hello')
-    ->model(Anthropic::model('claude-sonnet-4'))
-    ->providerOptions('anthropic', [
-        'raw' => ['top_k' => 40],
-    ])
-    ->run();
-```
-
-## Testing
-
-```bash
-composer test
-```
-
 ## Documentation
 
-- [PHP AI SDK documentation](https://phpaisdk.com/docs)
-- [Anthropic documentation](https://phpaisdk.com/docs/anthropic)
+[Read the documentation](https://phpaisdk.com/docs/0.x/providers/anthropic) for configuration, supported features, and more examples.
 
-## Community
+[Contributing](https://github.com/phpaisdk/.github/blob/main/CONTRIBUTING.md) · [Support](https://github.com/phpaisdk/.github/blob/main/SUPPORT.md)
 
-- [Contributing](https://github.com/phpaisdk/.github/blob/main/CONTRIBUTING.md)
-- [Support](https://github.com/phpaisdk/.github/blob/main/SUPPORT.md)
-- For private security reports, email [security@phpaisdk.com](mailto:security@phpaisdk.com).
+## License
 
-## Stored files (0.10.0 preparation)
-
-`Anthropic::files()` implements core `FileStoreInterface` for upload, metadata retrieval, paginated listing, download and deletion. Uploads have no OpenAI-style purpose field. The current Files documentation uses the normal `anthropic-version` header without a Files beta header.
-
-Use `Content::storedFile($stored->reference)` for documents or `Content::storedFile($stored->reference, image: true)` for images. Both map to native `source.type=file` blocks. Downloads are permitted by Anthropic only for files created by hosted tools; uploaded inputs have `downloadable=false`. File references are workspace-wide: enforce user ownership in your application before exposing any file operation.
-
-Sources: [Files](https://platform.claude.com/docs/en/build-with-claude/files), [PDF support](https://platform.claude.com/docs/en/build-with-claude/pdf-support), [vision](https://platform.claude.com/docs/en/build-with-claude/vision). Upload acceptance and model input acceptance are separate; file formats and model compatibility remain provider-owned.
+The MIT License (MIT). See [LICENSE](LICENSE) for details.
